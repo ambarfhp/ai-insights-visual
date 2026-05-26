@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AI Insights Drilldown Prototype v5</title>
+<title>AI Insights Drilldown Prototype v6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
@@ -229,7 +229,7 @@
 
   .segment {
     height:100%;
-    cursor:help;
+    cursor:pointer;
     position:relative;
   }
 
@@ -302,11 +302,26 @@
     font-weight:700;
     text-align:center;
     white-space:nowrap;
-    cursor:help;
+    cursor:pointer;
   }
 
   .return-pill:hover {
     filter:brightness(.96);
+  }
+
+  .info-dot {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:15px;
+    height:15px;
+    margin-left:5px;
+    border-radius:999px;
+    background:rgba(255,255,255,.75);
+    color:#111827;
+    font-size:10px;
+    font-weight:700;
+    vertical-align:middle;
   }
 
   .return-good {
@@ -337,15 +352,15 @@
     position:fixed;
     z-index:9999;
     display:none;
-    max-width:350px;
+    max-width:360px;
     white-space:pre-line;
     background:#111827;
     color:#fff;
-    border-radius:8px;
-    padding:8px 10px;
+    border-radius:10px;
+    padding:10px 12px;
     font-size:12px;
     line-height:1.45;
-    box-shadow:0 10px 24px rgba(15,23,42,.24);
+    box-shadow:0 12px 28px rgba(15,23,42,.28);
     pointer-events:none;
   }
 
@@ -2754,12 +2769,13 @@ function returnText(r) {
 
 function timeTip(r) {
   if (r.current_return_mpm === null || r.current_return_mpm === undefined) {
-    return `${r.topic}\nNo current-test time found for this topic in the selected view.`;
+    return `What this means\n${r.topic}\nNo current-test time found for this topic in the selected view.`;
   }
 
   const correctMarks = (r.current_correct_q || 0) * 3;
-  return `${r.topic}\n` +
-    `Current-test time: ${r.current_time_min.toFixed(1)} min\n` +
+  return `What this means\n` +
+    `${r.topic}\n` +
+    `Time spent in current test: ${r.current_time_min.toFixed(1)} min\n` +
     `Questions counted here: ${r.current_available_q || 0}\n` +
     `${r.current_correct_q || 0} correct, ${r.current_incorrect_q || 0} incorrect, ${r.current_skipped_q || 0} skipped\n` +
     `MPM = converted marks ÷ time = ${correctMarks} ÷ ${r.current_time_min.toFixed(1)} = ${r.current_return_mpm.toFixed(2)}`;
@@ -2835,7 +2851,7 @@ function renderTopics() {
                onmousemove="positionTip(event)"
                onmouseleave="hideTip()"
                onclick="showTip(timeTip(r), event)">
-            ${returnText(r)}
+            ${returnText(r)} <span class="info-dot">i</span>
           </div>
         </div>
         <div class="metric" onmouseenter="showTip(\`${recurTip}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${recurTip}\`, event)">~${r.opp_per_test} marks/test<br><span>${r.appeared_tests}/5 tests</span></div>
