@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AI Insights Drilldown Prototype v4</title>
+<title>AI Insights Drilldown Prototype v5</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
@@ -302,6 +302,11 @@
     font-weight:700;
     text-align:center;
     white-space:nowrap;
+    cursor:help;
+  }
+
+  .return-pill:hover {
+    filter:brightness(.96);
   }
 
   .return-good {
@@ -2747,6 +2752,19 @@ function returnText(r) {
   return `${r.current_time_min.toFixed(1)} min · ${r.current_return_mpm.toFixed(2)} MPM`;
 }
 
+function timeTip(r) {
+  if (r.current_return_mpm === null || r.current_return_mpm === undefined) {
+    return `${r.topic}\nNo current-test time found for this topic in the selected view.`;
+  }
+
+  const correctMarks = (r.current_correct_q || 0) * 3;
+  return `${r.topic}\n` +
+    `Current-test time: ${r.current_time_min.toFixed(1)} min\n` +
+    `Questions counted here: ${r.current_available_q || 0}\n` +
+    `${r.current_correct_q || 0} correct, ${r.current_incorrect_q || 0} incorrect, ${r.current_skipped_q || 0} skipped\n` +
+    `MPM = converted marks ÷ time = ${correctMarks} ÷ ${r.current_time_min.toFixed(1)} = ${r.current_return_mpm.toFixed(2)}`;
+}
+
 function sortCurrent(rows) {
   return [...rows].sort((a,b) =>
     (b.score / b.available - a.score / a.available) ||
@@ -2811,13 +2829,21 @@ function renderTopics() {
       <div class="row topic-layout">
         <div class="name">${r.topic}<div class="sub">${shortLabel(r.area)}</div></div>
         ${historyBar(r, maxTotal)}
-        <div class="metric"><div class="return-pill ${returnClass(r.current_return_mpm)}">${returnText(r)}</div></div>
+        <div class="metric">
+          <div class="return-pill ${returnClass(r.current_return_mpm)}"
+               onmouseenter="showTip(timeTip(r), event)"
+               onmousemove="positionTip(event)"
+               onmouseleave="hideTip()"
+               onclick="showTip(timeTip(r), event)">
+            ${returnText(r)}
+          </div>
+        </div>
         <div class="metric" onmouseenter="showTip(\`${recurTip}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${recurTip}\`, event)">~${r.opp_per_test} marks/test<br><span>${r.appeared_tests}/5 tests</span></div>
       </div>
     `;
   }).join("") || `<div class="empty">No topic rows for this view.</div>`;
 
-  document.getElementById("footnote").textContent = "Leakage is approximate: (incorrect + skipped) × 3 ÷ tests where the topic appeared. It is not penalty-adjusted score loss.";
+  document.getElementById("footnote").textContent = "Click/tap the time return pill to see what the minutes and MPM mean. Leakage is approximate: (incorrect + skipped) × 3 ÷ tests where the topic appeared.";
 }
 
 function render() {
