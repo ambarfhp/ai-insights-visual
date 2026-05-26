@@ -1,0 +1,2881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Insights Drilldown Prototype v6</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink:#111827;
+    --muted:#687385;
+    --bg:#f7f9fc;
+    --card:#ffffff;
+    --border:#e3e8ef;
+    --score:#2563eb;
+    --left:#edf2f7;
+    --left-line:#cbd5e1;
+    --green:#1f9d55;
+    --red:#e5484d;
+    --skip:#edf2f7;
+    --skip-line:#cbd5e1;
+    --warn:#f97316;
+  }
+
+  * { box-sizing:border-box; }
+
+  body {
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .page {
+    max-width:1120px;
+    margin:24px auto;
+    padding:0 16px;
+  }
+
+  .card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    box-shadow:0 8px 24px rgba(15,23,42,.07);
+    padding:24px;
+  }
+
+  .header {
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+    margin-bottom:16px;
+  }
+
+  h1 {
+    margin:0;
+    font-size:28px;
+    line-height:1.15;
+    letter-spacing:-0.02em;
+  }
+
+  .subtitle {
+    margin-top:6px;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  .legend {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:10px 16px;
+    color:#374151;
+    font-size:12px;
+    max-width:520px;
+  }
+
+  .legend-item { display:flex; align-items:center; gap:6px; }
+
+  .swatch {
+    width:14px;
+    height:14px;
+    display:inline-block;
+    border-radius:4px;
+    border:1px solid rgba(0,0,0,.08);
+  }
+
+  .pattern-swatch {
+    background:repeating-linear-gradient(135deg, var(--left) 0 5px, var(--left-line) 5px 7px, var(--left) 7px 12px);
+  }
+
+  .controls-row {
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin:12px 0 16px;
+  }
+
+  .breadcrumbs {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+  }
+
+  .crumb {
+    border:1px solid #d1d8e0;
+    background:#fff;
+    border-radius:999px;
+    padding:6px 10px;
+    cursor:pointer;
+    color:#374151;
+    font-family:inherit;
+  }
+
+  .crumb.active {
+    background:#111827;
+    color:#fff;
+    border-color:#111827;
+  }
+
+  .type-controls {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:8px;
+    min-width:360px;
+  }
+
+  .filter-btn {
+    border:1px solid #d1d8e0;
+    background:#fff;
+    color:#374151;
+    border-radius:999px;
+    padding:8px 12px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+    text-align:center;
+  }
+
+  .filter-btn.active {
+    background:#111827;
+    color:#fff;
+    border-color:#111827;
+  }
+
+  .chart-head {
+    display:grid;
+    gap:12px;
+    align-items:center;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    border-bottom:1px solid #eef2f7;
+    padding-bottom:8px;
+    text-align:center;
+  }
+
+  .chart-head div:first-child { text-align:left; }
+
+  .row {
+    display:grid;
+    gap:12px;
+    align-items:center;
+    padding:13px 0;
+    border-bottom:1px solid #f1f5f9;
+  }
+
+  .row:last-child { border-bottom:none; }
+
+  .section-layout,
+  .area-layout {
+    grid-template-columns:220px 1fr;
+  }
+
+  .topic-layout {
+    grid-template-columns:250px 1fr 140px 120px;
+  }
+
+  .name {
+    font-weight:700;
+    font-size:14px;
+    line-height:1.25;
+    cursor:default;
+  }
+
+  .name.clickable {
+    cursor:pointer;
+  }
+
+  .name.clickable:hover {
+    color:var(--score);
+  }
+
+  .sub {
+    margin-top:3px;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:500;
+  }
+
+  .bar-area {
+    position:relative;
+    height:34px;
+  }
+
+  .bar-shell {
+    position:absolute;
+    left:0;
+    top:7px;
+    height:22px;
+    border-radius:9px;
+    overflow:hidden;
+    background:#f3f4f6;
+    border:1px solid #d1d5db;
+    display:flex;
+  }
+
+  .segment {
+    height:100%;
+    cursor:pointer;
+    position:relative;
+  }
+
+  .segment:hover { filter:brightness(.94); }
+
+  .seg-score { background:var(--score); }
+
+  .seg-left {
+    background:repeating-linear-gradient(135deg, var(--left) 0 6px, var(--left-line) 6px 8px, var(--left) 8px 13px);
+  }
+
+  .seg-green { background:var(--green); }
+
+  .seg-red { background:var(--red); }
+
+  .seg-skip {
+    background:repeating-linear-gradient(135deg, var(--skip) 0 6px, var(--skip-line) 6px 8px, var(--skip) 8px 13px);
+  }
+
+  .seg-label {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+
+  .score-label,
+  .green-label,
+  .red-label {
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.20);
+  }
+
+  .left-label,
+  .skip-label {
+    color:#334155;
+  }
+
+  .bar-value {
+    position:absolute;
+    left:calc(100% + 7px);
+    top:2px;
+    font-weight:700;
+    font-size:12px;
+    color:#374151;
+    white-space:nowrap;
+  }
+
+  .metric {
+    text-align:center;
+    font-weight:700;
+    color:#111827;
+    font-size:13px;
+    line-height:1.25;
+  }
+
+  .metric span {
+    color:var(--muted);
+    font-weight:600;
+  }
+
+  .return-pill {
+    border-radius:999px;
+    padding:5px 8px;
+    font-size:12px;
+    font-weight:700;
+    text-align:center;
+    white-space:nowrap;
+    cursor:pointer;
+  }
+
+  .return-pill:hover {
+    filter:brightness(.96);
+  }
+
+  .info-dot {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:15px;
+    height:15px;
+    margin-left:5px;
+    border-radius:999px;
+    background:rgba(255,255,255,.75);
+    color:#111827;
+    font-size:10px;
+    font-weight:700;
+    vertical-align:middle;
+  }
+
+  .return-good {
+    background:rgba(31,157,85,.13);
+    color:#13713d;
+    border:1px solid rgba(31,157,85,.25);
+  }
+
+  .return-low {
+    background:rgba(229,72,77,.12);
+    color:#a92f35;
+    border:1px solid rgba(229,72,77,.25);
+  }
+
+  .return-mid {
+    background:rgba(249,115,22,.12);
+    color:#9a4d07;
+    border:1px solid rgba(249,115,22,.25);
+  }
+
+  .return-none {
+    background:#f8fafc;
+    color:var(--muted);
+    border:1px solid #e5e7eb;
+  }
+
+  .hover-tip {
+    position:fixed;
+    z-index:9999;
+    display:none;
+    max-width:360px;
+    white-space:pre-line;
+    background:#111827;
+    color:#fff;
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.45;
+    box-shadow:0 12px 28px rgba(15,23,42,.28);
+    pointer-events:none;
+  }
+
+  .empty {
+    color:var(--muted);
+    font-size:14px;
+    padding:22px 0;
+  }
+
+  .footnote {
+    color:var(--muted);
+    font-size:12px;
+    margin-top:12px;
+    line-height:1.45;
+  }
+
+  @media (max-width:960px) {
+    .topic-layout {
+      grid-template-columns:1fr;
+      gap:8px;
+    }
+
+    .topic-layout.chart-head {
+      display:none;
+    }
+
+    .metric {
+      text-align:left;
+    }
+  }
+
+  @media (max-width:760px) {
+    .card { padding:18px; }
+
+    .header {
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .legend {
+      justify-content:flex-start;
+      max-width:none;
+    }
+
+    .controls-row {
+      align-items:stretch;
+    }
+
+    .type-controls {
+      width:100%;
+      min-width:0;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:6px;
+    }
+
+    .section-layout,
+    .area-layout {
+      grid-template-columns:1fr;
+      gap:8px;
+    }
+
+    .section-layout.chart-head,
+    .area-layout.chart-head {
+      display:none;
+    }
+
+    .row {
+      padding:14px 0 12px;
+    }
+
+    h1 { font-size:24px; }
+
+    .subtitle { font-size:13px; }
+
+    .bar-shell {
+      max-width:100%;
+    }
+  }
+
+  @media (max-width:380px) {
+    .type-controls {
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:5px;
+    }
+
+    .filter-btn {
+      padding:8px 6px;
+      font-size:12px;
+    }
+
+    .seg-label {
+      font-size:11px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div>
+        <h1>Integrated Evidence Drilldown</h1>
+        <div class="subtitle">Section → Area → Topic. Click any row to drill down.</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--score)"></span> Score</div>
+        <div class="legend-item"><span class="swatch pattern-swatch"></span> Marks left / skipped</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--green)"></span> Correct</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--red)"></span> Incorrect</div>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="breadcrumbs" id="breadcrumbs"></div>
+      <div class="type-controls">
+        <button class="filter-btn active" id="type-All" onclick="setType('All')">All</button>
+        <button class="filter-btn" id="type-A" onclick="setType('A')">A</button>
+        <button class="filter-btn" id="type-B" onclick="setType('B')">B</button>
+        <button class="filter-btn" id="type-C" onclick="setType('C')">C</button>
+      </div>
+    </div>
+
+    <div class="chart-head" id="chartHead"></div>
+    <div id="chart"></div>
+    <div class="footnote" id="footnote"></div>
+  </div>
+</div>
+
+<div class="hover-tip" id="hoverTip"></div>
+
+<script>
+const payload = {
+  "sectionRows": {
+    "All": [
+      {
+        "section": "VARC",
+        "type": "All",
+        "score": 18,
+        "available": 72,
+        "attempted_q": 12,
+        "available_q": 24,
+        "correct_q": 7,
+        "incorrect_q": 5,
+        "skipped_q": 12,
+        "marks_left": 54,
+        "score_bar": 18,
+        "left_bar": 54,
+        "strength_pct": 25.0
+      },
+      {
+        "section": "DILR",
+        "type": "All",
+        "score": 27,
+        "available": 66,
+        "attempted_q": 12,
+        "available_q": 22,
+        "correct_q": 9,
+        "incorrect_q": 3,
+        "skipped_q": 10,
+        "marks_left": 39,
+        "score_bar": 27,
+        "left_bar": 39,
+        "strength_pct": 40.9
+      },
+      {
+        "section": "QA",
+        "type": "All",
+        "score": 9,
+        "available": 66,
+        "attempted_q": 7,
+        "available_q": 22,
+        "correct_q": 3,
+        "incorrect_q": 4,
+        "skipped_q": 15,
+        "marks_left": 57,
+        "score_bar": 9,
+        "left_bar": 57,
+        "strength_pct": 13.6
+      }
+    ],
+    "A": [
+      {
+        "section": "VARC",
+        "type": "A",
+        "score": 14,
+        "available": 30,
+        "attempted_q": 7,
+        "available_q": 10,
+        "correct_q": 5,
+        "incorrect_q": 2,
+        "skipped_q": 3,
+        "marks_left": 16,
+        "score_bar": 14,
+        "left_bar": 16,
+        "strength_pct": 46.7
+      },
+      {
+        "section": "DILR",
+        "type": "A",
+        "score": 27,
+        "available": 27,
+        "attempted_q": 9,
+        "available_q": 9,
+        "correct_q": 9,
+        "incorrect_q": 0,
+        "skipped_q": 0,
+        "marks_left": 0,
+        "score_bar": 27,
+        "left_bar": 0,
+        "strength_pct": 100.0
+      },
+      {
+        "section": "QA",
+        "type": "A",
+        "score": 6,
+        "available": 18,
+        "attempted_q": 3,
+        "available_q": 6,
+        "correct_q": 2,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 6,
+        "left_bar": 12,
+        "strength_pct": 33.3
+      }
+    ],
+    "B": [
+      {
+        "section": "VARC",
+        "type": "B",
+        "score": 1,
+        "available": 33,
+        "attempted_q": 4,
+        "available_q": 11,
+        "correct_q": 1,
+        "incorrect_q": 3,
+        "skipped_q": 7,
+        "marks_left": 32,
+        "score_bar": 1,
+        "left_bar": 32,
+        "strength_pct": 3.0
+      },
+      {
+        "section": "DILR",
+        "type": "B",
+        "score": 0,
+        "available": 12,
+        "attempted_q": 1,
+        "available_q": 4,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 0,
+        "left_bar": 12,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "type": "B",
+        "score": 3,
+        "available": 27,
+        "attempted_q": 3,
+        "available_q": 9,
+        "correct_q": 1,
+        "incorrect_q": 2,
+        "skipped_q": 6,
+        "marks_left": 24,
+        "score_bar": 3,
+        "left_bar": 24,
+        "strength_pct": 11.1
+      }
+    ],
+    "C": [
+      {
+        "section": "VARC",
+        "type": "C",
+        "score": 3,
+        "available": 9,
+        "attempted_q": 1,
+        "available_q": 3,
+        "correct_q": 1,
+        "incorrect_q": 0,
+        "skipped_q": 2,
+        "marks_left": 6,
+        "score_bar": 3,
+        "left_bar": 6,
+        "strength_pct": 33.3
+      },
+      {
+        "section": "DILR",
+        "type": "C",
+        "score": 0,
+        "available": 27,
+        "attempted_q": 2,
+        "available_q": 9,
+        "correct_q": 0,
+        "incorrect_q": 2,
+        "skipped_q": 7,
+        "marks_left": 27,
+        "score_bar": 0,
+        "left_bar": 27,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "type": "C",
+        "score": 0,
+        "available": 21,
+        "attempted_q": 1,
+        "available_q": 7,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 6,
+        "marks_left": 21,
+        "score_bar": 0,
+        "left_bar": 21,
+        "strength_pct": 0.0
+      }
+    ]
+  },
+  "areaRows": {
+    "All": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "type": "All",
+        "score": 6,
+        "available": 24,
+        "attempted_q": 4,
+        "available_q": 8,
+        "correct_q": 2,
+        "incorrect_q": 2,
+        "skipped_q": 4,
+        "marks_left": 18,
+        "score_bar": 6,
+        "left_bar": 18,
+        "strength_pct": 25.0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "type": "All",
+        "score": 12,
+        "available": 48,
+        "attempted_q": 8,
+        "available_q": 16,
+        "correct_q": 5,
+        "incorrect_q": 3,
+        "skipped_q": 8,
+        "marks_left": 36,
+        "score_bar": 12,
+        "left_bar": 36,
+        "strength_pct": 25.0
+      },
+      {
+        "section": "DILR",
+        "area": "Logical Reasoning",
+        "type": "All",
+        "score": 27,
+        "available": 39,
+        "attempted_q": 10,
+        "available_q": 13,
+        "correct_q": 9,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 27,
+        "left_bar": 12,
+        "strength_pct": 69.2
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "type": "All",
+        "score": 0,
+        "available": 27,
+        "attempted_q": 2,
+        "available_q": 9,
+        "correct_q": 0,
+        "incorrect_q": 2,
+        "skipped_q": 7,
+        "marks_left": 27,
+        "score_bar": 0,
+        "left_bar": 27,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "type": "All",
+        "score": 6,
+        "available": 18,
+        "attempted_q": 4,
+        "available_q": 6,
+        "correct_q": 2,
+        "incorrect_q": 2,
+        "skipped_q": 2,
+        "marks_left": 12,
+        "score_bar": 6,
+        "left_bar": 12,
+        "strength_pct": 33.3
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "type": "All",
+        "score": 0,
+        "available": 12,
+        "attempted_q": 0,
+        "available_q": 4,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 4,
+        "marks_left": 12,
+        "score_bar": 0,
+        "left_bar": 12,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "type": "All",
+        "score": 0,
+        "available": 15,
+        "attempted_q": 0,
+        "available_q": 5,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 5,
+        "marks_left": 15,
+        "score_bar": 0,
+        "left_bar": 15,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "type": "All",
+        "score": 0,
+        "available": 12,
+        "attempted_q": 2,
+        "available_q": 4,
+        "correct_q": 0,
+        "incorrect_q": 2,
+        "skipped_q": 2,
+        "marks_left": 12,
+        "score_bar": 0,
+        "left_bar": 12,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "type": "All",
+        "score": 3,
+        "available": 9,
+        "attempted_q": 1,
+        "available_q": 3,
+        "correct_q": 1,
+        "incorrect_q": 0,
+        "skipped_q": 2,
+        "marks_left": 6,
+        "score_bar": 3,
+        "left_bar": 6,
+        "strength_pct": 33.3
+      }
+    ],
+    "A": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "type": "A",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 1,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 0,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "type": "A",
+        "score": 14,
+        "available": 27,
+        "attempted_q": 6,
+        "available_q": 9,
+        "correct_q": 5,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 13,
+        "score_bar": 14,
+        "left_bar": 13,
+        "strength_pct": 51.9
+      },
+      {
+        "section": "DILR",
+        "area": "Logical Reasoning",
+        "type": "A",
+        "score": 27,
+        "available": 27,
+        "attempted_q": 9,
+        "available_q": 9,
+        "correct_q": 9,
+        "incorrect_q": 0,
+        "skipped_q": 0,
+        "marks_left": 0,
+        "score_bar": 27,
+        "left_bar": 0,
+        "strength_pct": 100.0
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "type": "A",
+        "score": 6,
+        "available": 12,
+        "attempted_q": 3,
+        "available_q": 4,
+        "correct_q": 2,
+        "incorrect_q": 1,
+        "skipped_q": 1,
+        "marks_left": 6,
+        "score_bar": 6,
+        "left_bar": 6,
+        "strength_pct": 50.0
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "type": "A",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 0,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "type": "A",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 0,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      }
+    ],
+    "B": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "type": "B",
+        "score": 3,
+        "available": 15,
+        "attempted_q": 2,
+        "available_q": 5,
+        "correct_q": 1,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 3,
+        "left_bar": 12,
+        "strength_pct": 20.0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "type": "B",
+        "score": -2,
+        "available": 18,
+        "attempted_q": 2,
+        "available_q": 6,
+        "correct_q": 0,
+        "incorrect_q": 2,
+        "skipped_q": 4,
+        "marks_left": 20,
+        "score_bar": 0,
+        "left_bar": 18,
+        "strength_pct": -11.1
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "type": "B",
+        "score": 0,
+        "available": 12,
+        "attempted_q": 1,
+        "available_q": 4,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 0,
+        "left_bar": 12,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "type": "B",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 1,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 1,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "type": "B",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 1,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 1,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "type": "B",
+        "score": 3,
+        "available": 6,
+        "attempted_q": 1,
+        "available_q": 2,
+        "correct_q": 1,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 3,
+        "left_bar": 3,
+        "strength_pct": 50.0
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "type": "B",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 0,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "type": "B",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 0,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 2,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      }
+    ],
+    "C": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "type": "C",
+        "score": 3,
+        "available": 6,
+        "attempted_q": 1,
+        "available_q": 2,
+        "correct_q": 1,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 3,
+        "left_bar": 3,
+        "strength_pct": 50.0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "type": "C",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 0,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "DILR",
+        "area": "Logical Reasoning",
+        "type": "C",
+        "score": 0,
+        "available": 12,
+        "attempted_q": 1,
+        "available_q": 4,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 3,
+        "marks_left": 12,
+        "score_bar": 0,
+        "left_bar": 12,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "type": "C",
+        "score": 0,
+        "available": 15,
+        "attempted_q": 1,
+        "available_q": 5,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 4,
+        "marks_left": 15,
+        "score_bar": 0,
+        "left_bar": 15,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "type": "C",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 1,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 1,
+        "skipped_q": 1,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "type": "C",
+        "score": 0,
+        "available": 3,
+        "attempted_q": 0,
+        "available_q": 1,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 1,
+        "marks_left": 3,
+        "score_bar": 0,
+        "left_bar": 3,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "type": "C",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 0,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 2,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "type": "C",
+        "score": 0,
+        "available": 6,
+        "attempted_q": 0,
+        "available_q": 2,
+        "correct_q": 0,
+        "incorrect_q": 0,
+        "skipped_q": 2,
+        "marks_left": 6,
+        "score_bar": 0,
+        "left_bar": 6,
+        "strength_pct": 0.0
+      }
+    ]
+  },
+  "topicRows": {
+    "All": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Sentence out of context",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 2,
+        "hist_incorrect": 6,
+        "hist_skipped": 0,
+        "hist_total": 8,
+        "hist_missed": 6,
+        "appeared_tests": 5,
+        "strength_pct": 25.0,
+        "opp_per_test": 3.6,
+        "current_time_min": 1.83,
+        "current_return_mpm": 1.64,
+        "current_correct_q": 1,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 2
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Paragraph Completion",
+        "type": "All",
+        "types_seen": [
+          "B",
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 6,
+        "hist_total": 7,
+        "hist_missed": 7,
+        "appeared_tests": 4,
+        "strength_pct": 0.0,
+        "opp_per_test": 5.2,
+        "current_time_min": 0.18,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 2
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Inference",
+        "type": "All",
+        "types_seen": [
+          "A",
+          "B",
+          "C"
+        ],
+        "hist_correct": 7,
+        "hist_incorrect": 5,
+        "hist_skipped": 10,
+        "hist_total": 22,
+        "hist_missed": 15,
+        "appeared_tests": 5,
+        "strength_pct": 31.8,
+        "opp_per_test": 9.0,
+        "current_time_min": 11.4,
+        "current_return_mpm": 0.53,
+        "current_correct_q": 2,
+        "current_incorrect_q": 2,
+        "current_skipped_q": 4,
+        "current_available_q": 8
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Specific Detail Question",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 7,
+        "hist_incorrect": 3,
+        "hist_skipped": 5,
+        "hist_total": 15,
+        "hist_missed": 8,
+        "appeared_tests": 5,
+        "strength_pct": 46.7,
+        "opp_per_test": 4.8,
+        "current_time_min": 9.93,
+        "current_return_mpm": 0.6,
+        "current_correct_q": 2,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 3
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Summary",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 5,
+        "hist_total": 7,
+        "hist_missed": 7,
+        "appeared_tests": 4,
+        "strength_pct": 0.0,
+        "opp_per_test": 5.2,
+        "current_time_min": 0.47,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 2
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Jumbled Paragraphs",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 0,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 2.63,
+        "current_return_mpm": 1.14,
+        "current_correct_q": 1,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 2
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Style,Tone and Attitude",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": null,
+        "current_return_mpm": null,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 0,
+        "current_available_q": 0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Application Question",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 1,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 3.73,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Central Idea",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 5.02,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Contextual Vocabulary",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.53,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "topic": "Table",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 4,
+        "hist_total": 5,
+        "hist_missed": 5,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 7.5,
+        "current_time_min": 8.73,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 3,
+        "current_available_q": 4
+      },
+      {
+        "section": "DILR",
+        "area": "Logical Reasoning",
+        "topic": "Puzzles",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 1,
+        "hist_incorrect": 3,
+        "hist_skipped": 4,
+        "hist_total": 8,
+        "hist_missed": 7,
+        "appeared_tests": 2,
+        "strength_pct": 12.5,
+        "opp_per_test": 10.5,
+        "current_time_min": 7.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 3,
+        "current_available_q": 4
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "topic": "Miscellaneous",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 4,
+        "hist_total": 5,
+        "hist_missed": 5,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 15.0,
+        "current_time_min": 5.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 4,
+        "current_available_q": 5
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Time-Speed-Distance",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 1,
+        "hist_total": 3,
+        "hist_missed": 3,
+        "appeared_tests": 3,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 7.77,
+        "current_return_mpm": 0.39,
+        "current_correct_q": 1,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 2
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Time and Work",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 1,
+        "hist_incorrect": 2,
+        "hist_skipped": 0,
+        "hist_total": 3,
+        "hist_missed": 2,
+        "appeared_tests": 3,
+        "strength_pct": 33.3,
+        "opp_per_test": 2.0,
+        "current_time_min": 4.9,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Triangles",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 1,
+        "hist_incorrect": 0,
+        "hist_skipped": 3,
+        "hist_total": 4,
+        "hist_missed": 3,
+        "appeared_tests": 4,
+        "strength_pct": 25.0,
+        "opp_per_test": 2.2,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "topic": "Quadratic Equations",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Surds & Indices",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Base Systems",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 1,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 3.03,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "SICI",
+        "type": "All",
+        "types_seen": [
+          "A"
+        ],
+        "hist_correct": 2,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 4,
+        "hist_missed": 2,
+        "appeared_tests": 4,
+        "strength_pct": 50.0,
+        "opp_per_test": 1.5,
+        "current_time_min": 0.2,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Coordinate Geometry",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.13,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Factorials",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.2,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Functions",
+        "type": "All",
+        "types_seen": [
+          "A",
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 6.0,
+        "current_time_min": 1.5,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 2
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "topic": "Higher Order Polynomials",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.83,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Mensuration",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Mixtures & Alligations",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Permutation & Combination",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.03,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Quadrilaterals",
+        "type": "All",
+        "types_seen": [
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.37,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Remainders",
+        "type": "All",
+        "types_seen": [
+          "B"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 0,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 4.55,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Sequence & Series",
+        "type": "All",
+        "types_seen": [
+          "B",
+          "C"
+        ],
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 6.0,
+        "current_time_min": 1.17,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 2
+      }
+    ],
+    "A": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Sentence out of context",
+        "type": "A",
+        "hist_correct": 2,
+        "hist_incorrect": 6,
+        "hist_skipped": 0,
+        "hist_total": 8,
+        "hist_missed": 6,
+        "appeared_tests": 5,
+        "strength_pct": 25.0,
+        "opp_per_test": 3.6,
+        "current_time_min": 0.67,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Application Question",
+        "type": "A",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 1,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 3.73,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Inference",
+        "type": "A",
+        "hist_correct": 6,
+        "hist_incorrect": 1,
+        "hist_skipped": 6,
+        "hist_total": 13,
+        "hist_missed": 7,
+        "appeared_tests": 5,
+        "strength_pct": 46.2,
+        "opp_per_test": 4.2,
+        "current_time_min": 8.08,
+        "current_return_mpm": 0.74,
+        "current_correct_q": 2,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 4
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Contextual Vocabulary",
+        "type": "A",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.53,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Time and Work",
+        "type": "A",
+        "hist_correct": 1,
+        "hist_incorrect": 2,
+        "hist_skipped": 0,
+        "hist_total": 3,
+        "hist_missed": 2,
+        "appeared_tests": 3,
+        "strength_pct": 33.3,
+        "opp_per_test": 2.0,
+        "current_time_min": 4.9,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Triangles",
+        "type": "A",
+        "hist_correct": 1,
+        "hist_incorrect": 0,
+        "hist_skipped": 3,
+        "hist_total": 4,
+        "hist_missed": 3,
+        "appeared_tests": 4,
+        "strength_pct": 25.0,
+        "opp_per_test": 2.2,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "SICI",
+        "type": "A",
+        "hist_correct": 2,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 4,
+        "hist_missed": 2,
+        "appeared_tests": 4,
+        "strength_pct": 50.0,
+        "opp_per_test": 1.5,
+        "current_time_min": 0.2,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Functions",
+        "type": "A",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      }
+    ],
+    "B": [
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Paragraph Completion",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 4,
+        "hist_total": 5,
+        "hist_missed": 5,
+        "appeared_tests": 4,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.8,
+        "current_time_min": 0.18,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Inference",
+        "type": "B",
+        "hist_correct": 1,
+        "hist_incorrect": 3,
+        "hist_skipped": 3,
+        "hist_total": 7,
+        "hist_missed": 6,
+        "appeared_tests": 3,
+        "strength_pct": 14.3,
+        "opp_per_test": 6.0,
+        "current_time_min": 3.2,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 2,
+        "current_skipped_q": 1,
+        "current_available_q": 3
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Specific Detail Question",
+        "type": "B",
+        "hist_correct": 7,
+        "hist_incorrect": 3,
+        "hist_skipped": 5,
+        "hist_total": 15,
+        "hist_missed": 8,
+        "appeared_tests": 5,
+        "strength_pct": 46.7,
+        "opp_per_test": 4.8,
+        "current_time_min": 2.1,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Summary",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 5,
+        "hist_total": 7,
+        "hist_missed": 7,
+        "appeared_tests": 4,
+        "strength_pct": 0.0,
+        "opp_per_test": 5.2,
+        "current_time_min": 0.47,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 2,
+        "current_available_q": 2
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Jumbled Paragraphs",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 0,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.22,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Style,Tone and Attitude",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": null,
+        "current_return_mpm": null,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 0,
+        "current_available_q": 0
+      },
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Central Idea",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 5.02,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "topic": "Table",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 4,
+        "hist_total": 5,
+        "hist_missed": 5,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 7.5,
+        "current_time_min": 8.73,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 3,
+        "current_available_q": 4
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Time-Speed-Distance",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 2,
+        "hist_skipped": 1,
+        "hist_total": 3,
+        "hist_missed": 3,
+        "appeared_tests": 3,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 4.47,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "topic": "Quadratic Equations",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Surds & Indices",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Coordinate Geometry",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.13,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Functions",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.43,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Arithmetic",
+        "topic": "Mixtures & Alligations",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Remainders",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 0,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 4.55,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Sequence & Series",
+        "type": "B",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      }
+    ],
+    "C": [
+      {
+        "section": "VARC",
+        "area": "Reading Comprehension",
+        "topic": "Inference",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 1,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "VARC",
+        "area": "Verbal Ability",
+        "topic": "Paragraph Completion",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.0,
+        "current_return_mpm": null,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "DILR",
+        "area": "Logical Reasoning",
+        "topic": "Puzzles",
+        "type": "C",
+        "hist_correct": 1,
+        "hist_incorrect": 3,
+        "hist_skipped": 4,
+        "hist_total": 8,
+        "hist_missed": 7,
+        "appeared_tests": 2,
+        "strength_pct": 12.5,
+        "opp_per_test": 10.5,
+        "current_time_min": 7.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 3,
+        "current_available_q": 4
+      },
+      {
+        "section": "DILR",
+        "area": "Data Interpretation",
+        "topic": "Miscellaneous",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 4,
+        "hist_total": 5,
+        "hist_missed": 5,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 15.0,
+        "current_time_min": 5.12,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 4,
+        "current_available_q": 5
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Base Systems",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 1,
+        "hist_skipped": 1,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 3.03,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 1,
+        "current_skipped_q": 0,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Numbers",
+        "topic": "Factorials",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.2,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Algebra",
+        "topic": "Higher Order Polynomials",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 2,
+        "hist_total": 2,
+        "hist_missed": 2,
+        "appeared_tests": 2,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 1.83,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Mensuration",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.07,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Permutation & Combination",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.03,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Geometry",
+        "topic": "Quadrilaterals",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.37,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      },
+      {
+        "section": "QA",
+        "area": "Modern Math",
+        "topic": "Sequence & Series",
+        "type": "C",
+        "hist_correct": 0,
+        "hist_incorrect": 0,
+        "hist_skipped": 1,
+        "hist_total": 1,
+        "hist_missed": 1,
+        "appeared_tests": 1,
+        "strength_pct": 0.0,
+        "opp_per_test": 3.0,
+        "current_time_min": 0.05,
+        "current_return_mpm": 0.0,
+        "current_correct_q": 0,
+        "current_incorrect_q": 0,
+        "current_skipped_q": 1,
+        "current_available_q": 1
+      }
+    ]
+  },
+  "sectionReadiness": {
+    "VARC": {
+      "percentile": "55.06%ile",
+      "status": "\u2705 CLEARED 18/18 \u2014 safe by 0"
+    },
+    "DILR": {
+      "percentile": "61.58%ile",
+      "status": "\u2705 CLEARED 27/26 \u2014 safe by 1"
+    },
+    "QA": {
+      "percentile": "41.31%ile",
+      "status": "\u274c MISSED 9/13 \u2014 gap 4"
+    }
+  }
+};
+let currentLevel = "section";
+let selectedSection = null;
+let selectedArea = null;
+let currentType = "All";
+const hoverTip = document.getElementById("hoverTip");
+
+const AREA_SHORT = {
+  "Reading Comprehension": "RC",
+  "Verbal Ability": "VA",
+  "Data Interpretation": "DI",
+  "Logical Reasoning": "LR",
+  "Numbers": "Num",
+  "Arithmetic": "Arith",
+  "Algebra": "Alg",
+  "Geometry": "Geo",
+  "Modern Math": "Mod Math"
+};
+
+function shortLabel(name) {
+  return AREA_SHORT[name] || name;
+}
+
+function pct(value, base) {
+  return base ? Math.max(0, value / base * 100) : 0;
+}
+
+function showTip(text, event) {
+  hoverTip.textContent = text;
+  hoverTip.style.display = "block";
+  positionTip(event);
+}
+
+function positionTip(event) {
+  const margin = 12;
+  const rect = hoverTip.getBoundingClientRect();
+  let clientX = event.clientX;
+  let clientY = event.clientY;
+
+  if ((clientX === 0 && clientY === 0) || clientX === undefined || clientY === undefined) {
+    const targetRect = event.target.getBoundingClientRect();
+    clientX = targetRect.left + targetRect.width / 2;
+    clientY = targetRect.top + targetRect.height / 2;
+  }
+
+  let x = clientX + 12;
+  let y = clientY + 12;
+
+  if (x + rect.width > window.innerWidth - margin) x = clientX - rect.width - 12;
+  if (y + rect.height > window.innerHeight - margin) y = clientY - rect.height - 12;
+  if (x < margin) x = margin;
+  if (y < margin) y = margin;
+
+  hoverTip.style.left = x + "px";
+  hoverTip.style.top = y + "px";
+}
+
+function hideTip() {
+  hoverTip.style.display = "none";
+}
+
+function segment(text, cls, widthPct, label, labelClass="") {
+  if (widthPct <= 0) return "";
+  const safe = text.replace(/`/g, "\\`");
+  const labelHtml = label !== null && label !== undefined && label !== "" ? `<span class="seg-label ${labelClass}">${label}</span>` : "";
+  return `<div class="segment ${cls}" style="width:${widthPct}%" onmouseenter="showTip(\`${safe}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${safe}\`, event)">${labelHtml}</div>`;
+}
+
+function setType(t) {
+  currentType = t;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("type-" + t).classList.add("active");
+  render();
+}
+
+function goSection() {
+  currentLevel = "section";
+  selectedSection = null;
+  selectedArea = null;
+  render();
+}
+
+function goArea(section) {
+  currentLevel = "area";
+  selectedSection = section;
+  selectedArea = null;
+  render();
+}
+
+function goTopic(area) {
+  currentLevel = "topic";
+  selectedArea = area;
+  render();
+}
+
+function renderBreadcrumbs() {
+  const b = document.getElementById("breadcrumbs");
+  let html = `<button class="crumb ${currentLevel === "section" ? "active" : ""}" onclick="goSection()">Sections</button>`;
+  if (selectedSection) {
+    html += `<span>›</span><button class="crumb ${currentLevel === "area" ? "active" : ""}" onclick="goArea('${selectedSection}')">${selectedSection}</button>`;
+  }
+  if (selectedArea) {
+    html += `<span>›</span><button class="crumb active">${shortLabel(selectedArea)}</button>`;
+  }
+  b.innerHTML = html;
+}
+
+function maxFor(rows, field) {
+  return Math.max(...rows.map(r => r[field] || 0), 1);
+}
+
+function scoreBar(r, maxAvail) {
+  const widthPct = pct(r.available, maxAvail);
+  const scorePct = pct(Math.max(r.score,0), r.available);
+  const leftPct = pct(Math.max(r.available - Math.max(r.score,0),0), r.available);
+  const tip = `${r.score}/${r.available} scored\n${r.marks_left} marks left\n${r.correct_q} correct, ${r.incorrect_q} incorrect, ${r.skipped_q} skipped`;
+
+  return `
+    <div class="bar-area">
+      <div class="bar-shell" style="width:${widthPct}%">
+        ${segment(tip, "seg-score", scorePct, r.score > 0 ? r.score : "", "score-label")}
+        ${segment(tip, "seg-left", leftPct, r.marks_left, "left-label")}
+        <span class="bar-value">${r.available}</span>
+      </div>
+    </div>
+  `;
+}
+
+function historyBar(r, maxTotal) {
+  const widthPct = pct(r.hist_total, maxTotal);
+  const cPct = pct(r.hist_correct, r.hist_total);
+  const wPct = pct(r.hist_incorrect, r.hist_total);
+  const sPct = pct(r.hist_skipped, r.hist_total);
+  const tip = `${r.topic}\nCumulative history: ${r.hist_correct} correct, ${r.hist_incorrect} incorrect, ${r.hist_skipped} skipped\nAppeared in ${r.appeared_tests}/5 tests`;
+
+  return `
+    <div class="bar-area">
+      <div class="bar-shell" style="width:${widthPct}%">
+        ${segment(tip, "seg-green", cPct, r.hist_correct || "", "green-label")}
+        ${segment(tip, "seg-red", wPct, r.hist_incorrect || "", "red-label")}
+        ${segment(tip, "seg-skip", sPct, r.hist_skipped || "", "skip-label")}
+        <span class="bar-value">${r.hist_total}</span>
+      </div>
+    </div>
+  `;
+}
+
+function returnClass(mpm) {
+  if (mpm === null || mpm === undefined) return "return-none";
+  if (mpm >= 0.75) return "return-good";
+  if (mpm > 0) return "return-mid";
+  return "return-low";
+}
+
+function returnText(r) {
+  if (r.current_return_mpm === null || r.current_return_mpm === undefined) return "No current time";
+  return `${r.current_time_min.toFixed(1)} min · ${r.current_return_mpm.toFixed(2)} MPM`;
+}
+
+function timeTip(r) {
+  if (r.current_return_mpm === null || r.current_return_mpm === undefined) {
+    return `What this means\n${r.topic}\nNo current-test time found for this topic in the selected view.`;
+  }
+
+  const correctMarks = (r.current_correct_q || 0) * 3;
+  return `What this means\n` +
+    `${r.topic}\n` +
+    `Time spent in current test: ${r.current_time_min.toFixed(1)} min\n` +
+    `Questions counted here: ${r.current_available_q || 0}\n` +
+    `${r.current_correct_q || 0} correct, ${r.current_incorrect_q || 0} incorrect, ${r.current_skipped_q || 0} skipped\n` +
+    `MPM = converted marks ÷ time = ${correctMarks} ÷ ${r.current_time_min.toFixed(1)} = ${r.current_return_mpm.toFixed(2)}`;
+}
+
+function sortCurrent(rows) {
+  return [...rows].sort((a,b) =>
+    (b.score / b.available - a.score / a.available) ||
+    (b.available - a.available) ||
+    ((a.area || a.section || "").localeCompare(b.area || b.section || ""))
+  );
+}
+
+function sortTopics(rows) {
+  return [...rows].filter(r => r.hist_total > 0).sort((a,b) =>
+    (b.hist_correct / b.hist_total - a.hist_correct / a.hist_total) ||
+    (b.appeared_tests - a.appeared_tests) ||
+    (b.hist_total - a.hist_total) ||
+    a.topic.localeCompare(b.topic)
+  );
+}
+
+function renderSections() {
+  const rows = sortCurrent(payload.sectionRows[currentType]);
+  document.getElementById("chartHead").className = "chart-head section-layout";
+  document.getElementById("chartHead").innerHTML = `<div>Section</div><div>Score vs marks left</div>`;
+  const maxAvail = maxFor(rows, "available");
+
+  document.getElementById("chart").innerHTML = rows.map(r => {
+    const readiness = currentType === "All" && payload.sectionReadiness[r.section] ? payload.sectionReadiness[r.section].percentile + " · " + payload.sectionReadiness[r.section].status : "";
+    return `
+      <div class="row section-layout">
+        <div class="name clickable" onclick="goArea('${r.section}')">${r.section}<div class="sub">${readiness || "Click to view areas"}</div></div>
+        ${scoreBar(r, maxAvail)}
+      </div>
+    `;
+  }).join("");
+
+  document.getElementById("footnote").textContent = "Sections are ordered by current score conversion. Bars use approved current selection snapshots.";
+}
+
+function renderAreas() {
+  const rows = sortCurrent(payload.areaRows[currentType].filter(r => r.section === selectedSection));
+  document.getElementById("chartHead").className = "chart-head area-layout";
+  document.getElementById("chartHead").innerHTML = `<div>Area</div><div>Score vs marks left</div>`;
+  const maxAvail = maxFor(rows, "available");
+
+  document.getElementById("chart").innerHTML = rows.map(r => `
+    <div class="row area-layout">
+      <div class="name clickable" onclick="goTopic('${r.area}')">${shortLabel(r.area)}<div class="sub">${r.area} · click to view topics</div></div>
+      ${scoreBar(r, maxAvail)}
+    </div>
+  `).join("") || `<div class="empty">No rows for this view.</div>`;
+
+  document.getElementById("footnote").textContent = "Areas are ordered by current score conversion. Click an area to view cumulative topic performance.";
+}
+
+function renderTopics() {
+  const rows = sortTopics(payload.topicRows[currentType].filter(r => r.area === selectedArea));
+  document.getElementById("chartHead").className = "chart-head topic-layout";
+  document.getElementById("chartHead").innerHTML = `<div>Topic</div><div>Cumulative performance</div><div>Current time return</div><div>Leakage + recurrence</div>`;
+  const maxTotal = maxFor(rows, "hist_total");
+
+  document.getElementById("chart").innerHTML = rows.map(r => {
+    const recurTip = `${r.topic}\nHas been leaking approx. ${r.opp_per_test} marks/test when seen\n${r.hist_missed} not converted across ${r.appeared_tests} tests`;
+    return `
+      <div class="row topic-layout">
+        <div class="name">${r.topic}<div class="sub">${shortLabel(r.area)}</div></div>
+        ${historyBar(r, maxTotal)}
+        <div class="metric">
+          <div class="return-pill ${returnClass(r.current_return_mpm)}"
+               onmouseenter="showTip(timeTip(r), event)"
+               onmousemove="positionTip(event)"
+               onmouseleave="hideTip()"
+               onclick="showTip(timeTip(r), event)">
+            ${returnText(r)} <span class="info-dot">i</span>
+          </div>
+        </div>
+        <div class="metric" onmouseenter="showTip(\`${recurTip}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${recurTip}\`, event)">~${r.opp_per_test} marks/test<br><span>${r.appeared_tests}/5 tests</span></div>
+      </div>
+    `;
+  }).join("") || `<div class="empty">No topic rows for this view.</div>`;
+
+  document.getElementById("footnote").textContent = "Click/tap the time return pill to see what the minutes and MPM mean. Leakage is approximate: (incorrect + skipped) × 3 ÷ tests where the topic appeared.";
+}
+
+function render() {
+  renderBreadcrumbs();
+  hideTip();
+
+  if (currentLevel === "section") renderSections();
+  else if (currentLevel === "area") renderAreas();
+  else renderTopics();
+}
+
+document.addEventListener("click", function(e) {
+  if (!e.target.closest(".segment") && !e.target.closest(".metric")) hideTip();
+});
+
+render();
+</script>
+</body>
+</html>
