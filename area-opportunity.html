@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Area Opportunity — Inline Labels v13</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink:#111827;
+    --muted:#687385;
+    --bg:#f7f9fc;
+    --card:#ffffff;
+    --border:#e3e8ef;
+    --score:#2563eb;
+    --left:#edf2f7;
+    --left-line:#cbd5e1;
+  }
+
+  * { box-sizing:border-box; }
+
+  body {
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .page {
+    max-width:1040px;
+    margin:24px auto;
+    padding:0 16px;
+  }
+
+  .card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    box-shadow:0 8px 24px rgba(15,23,42,.07);
+    padding:24px;
+  }
+
+  .header {
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+    margin-bottom:16px;
+  }
+
+  h1 {
+    margin:0;
+    font-size:28px;
+    line-height:1.15;
+    letter-spacing:-0.02em;
+  }
+
+  .subtitle {
+    margin-top:6px;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  .legend {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:10px 16px;
+    color:#374151;
+    font-size:12px;
+    max-width:400px;
+  }
+
+  .legend-item { display:flex; align-items:center; gap:6px; }
+
+  .swatch {
+    width:14px;
+    height:14px;
+    display:inline-block;
+    border-radius:4px;
+    border:1px solid rgba(0,0,0,.08);
+  }
+
+  .left-swatch {
+    background:repeating-linear-gradient(135deg, var(--left) 0 5px, var(--left-line) 5px 7px, var(--left) 7px 12px);
+  }
+
+  .controls-wrap { margin:12px 0 18px; }
+
+  .controls {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+  }
+
+  .filter-btn {
+    border:1px solid #d1d8e0;
+    background:#fff;
+    color:#374151;
+    border-radius:999px;
+    padding:9px 12px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+    text-align:center;
+  }
+
+  .filter-btn.active {
+    background:#111827;
+    color:#fff;
+    border-color:#111827;
+  }
+
+  .view-summary {
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    color:#374151;
+    font-size:13px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+  }
+
+  .view-summary strong { color:#111827; }
+
+  .chart-head {
+    display:grid;
+    grid-template-columns:190px 1fr;
+    gap:12px;
+    align-items:center;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    border-bottom:1px solid #eef2f7;
+    padding-bottom:8px;
+    text-align:center;
+  }
+
+  .chart-head div:first-child { text-align:left; }
+
+  .area-row {
+    display:grid;
+    grid-template-columns:190px 1fr;
+    gap:12px;
+    align-items:center;
+    padding:13px 0;
+    border-bottom:1px solid #f1f5f9;
+  }
+
+  .area-row:last-child { border-bottom:none; }
+
+  .area-name {
+    font-weight:700;
+    font-size:14px;
+  }
+
+  .bar-area {
+    position:relative;
+    height:34px;
+  }
+
+  .bar-shell {
+    position:absolute;
+    left:0;
+    top:7px;
+    height:22px;
+    border-radius:9px;
+    overflow:hidden;
+    background:#f3f4f6;
+    border:1px solid #d1d5db;
+    display:flex;
+  }
+
+  .segment {
+    height:100%;
+    cursor:help;
+    position:relative;
+    min-width:0;
+  }
+
+  .segment:hover { filter:brightness(.94); }
+
+  .seg-score { background:var(--score); }
+
+  .seg-left {
+    background:repeating-linear-gradient(135deg, var(--left) 0 6px, var(--left-line) 6px 8px, var(--left) 8px 13px);
+  }
+
+  .seg-label {
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+
+  .score-label {
+    color:#fff;
+    left:50%;
+    transform:translate(-50%, -50%);
+  }
+
+  .left-label {
+    color:#334155;
+    left:50%;
+    transform:translate(-50%, -50%);
+  }
+
+  .score-badge {
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    background:#fff;
+    border:1px solid rgba(37,99,235,.35);
+    color:var(--score);
+    border-radius:999px;
+    padding:1px 6px;
+    font-size:11px;
+    font-weight:700;
+    pointer-events:none;
+  }
+
+  .bar-value {
+    position:absolute;
+    left:calc(100% + 7px);
+    top:2px;
+    font-weight:700;
+    font-size:12px;
+    color:#374151;
+    white-space:nowrap;
+  }
+
+  .axis {
+    display:grid;
+    grid-template-columns:190px 1fr;
+    gap:12px;
+    align-items:center;
+    margin-top:6px;
+    font-size:11px;
+    color:var(--muted);
+  }
+
+  .ticks {
+    position:relative;
+    height:24px;
+    border-top:1px solid #cbd5e1;
+  }
+
+  .tick {
+    position:absolute;
+    top:-1px;
+    height:7px;
+    border-left:1px solid #94a3b8;
+  }
+
+  .tick span {
+    position:absolute;
+    top:8px;
+    left:-8px;
+  }
+
+  .footnote {
+    color:var(--muted);
+    font-size:12px;
+    margin-top:12px;
+    line-height:1.45;
+  }
+
+  .hover-tip {
+    position:fixed;
+    z-index:9999;
+    display:none;
+    max-width:310px;
+    white-space:pre-line;
+    background:#111827;
+    color:#fff;
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:12px;
+    line-height:1.45;
+    box-shadow:0 10px 24px rgba(15,23,42,.24);
+    pointer-events:none;
+  }
+
+  @media (max-width:760px) {
+    .card { padding:18px; }
+
+    .header {
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .legend {
+      justify-content:flex-start;
+      max-width:none;
+    }
+
+    .controls {
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:8px;
+    }
+
+    #btn-All { grid-column:1 / -1; }
+
+    .filter-btn {
+      width:100%;
+      padding:9px 8px;
+      white-space:nowrap;
+    }
+
+    .view-summary {
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .chart-head { display:none; }
+
+    .area-row {
+      grid-template-columns:1fr;
+      gap:8px;
+      padding:14px 0 10px;
+    }
+
+    .area-name {
+      font-size:14px;
+    }
+
+    .bar-area {
+      min-height:34px;
+    }
+
+    .bar-shell { max-width:100%; }
+
+    .bar-value {
+      left:calc(100% + 5px);
+      top:2px;
+      color:#374151;
+      font-size:11px;
+    }
+
+    .axis { display:none; }
+
+    h1 { font-size:24px; }
+
+    .subtitle { font-size:13px; }
+
+    .hover-tip {
+      max-width:270px;
+      pointer-events:auto;
+    }
+  }
+
+  @media (max-width:360px) {
+    .controls {
+      grid-template-columns:1fr;
+    }
+
+    #btn-All { grid-column:auto; }
+
+    .seg-label {
+      font-size:11px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div>
+        <h1>Area Opportunity</h1>
+        <div class="subtitle">Full bar = available marks. Blue = current score. Patterned section = marks left.</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--score)"></span> Current score</div>
+        <div class="legend-item"><span class="swatch left-swatch"></span> Marks left</div>
+      </div>
+    </div>
+
+    <div class="controls-wrap">
+      <div class="controls">
+        <button class="filter-btn active" onclick="setView('All')" id="btn-All">Area</button>
+        <button class="filter-btn" onclick="setView('A')" id="btn-A">Type A</button>
+        <button class="filter-btn" onclick="setView('B')" id="btn-B">Type B</button>
+        <button class="filter-btn" onclick="setView('C')" id="btn-C">Type C</button>
+      </div>
+    </div>
+
+    <div class="view-summary" id="summary"></div>
+
+    <div class="chart-head">
+      <div>Area</div>
+      <div>Score vs marks left</div>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="footnote">Hover/tap a segment for the simple correct/incorrect breakdown. Incorrect attempts may or may not carry penalty depending on question format.</div>
+  </div>
+</div>
+
+<div class="hover-tip" id="hoverTip"></div>
+
+<script>
+const dataByView = {
+  "All": [
+    {
+      "area": "Verbal Ability",
+      "type": "All",
+      "available": 24,
+      "net_score": 6,
+      "correct_q": 2,
+      "incorrect_q": 2,
+      "skipped_q": 4,
+      "available_q": 8,
+      "score_bar": 6,
+      "marks_left": 18,
+      "bar_left": 18
+    },
+    {
+      "area": "Reading Comprehension",
+      "type": "All",
+      "available": 48,
+      "net_score": 12,
+      "correct_q": 5,
+      "incorrect_q": 3,
+      "skipped_q": 8,
+      "available_q": 16,
+      "score_bar": 12,
+      "marks_left": 36,
+      "bar_left": 36
+    },
+    {
+      "area": "Logical Reasoning",
+      "type": "All",
+      "available": 39,
+      "net_score": 27,
+      "correct_q": 9,
+      "incorrect_q": 1,
+      "skipped_q": 3,
+      "available_q": 13,
+      "score_bar": 27,
+      "marks_left": 12,
+      "bar_left": 12
+    },
+    {
+      "area": "Data Interpretation",
+      "type": "All",
+      "available": 27,
+      "net_score": 0,
+      "correct_q": 0,
+      "incorrect_q": 2,
+      "skipped_q": 7,
+      "available_q": 9,
+      "score_bar": 0,
+      "marks_left": 27,
+      "bar_left": 27
+    },
+    {
+      "area": "Arithmetic",
+      "type": "All",
+      "available": 18,
+      "net_score": 6,
+      "correct_q": 2,
+      "incorrect_q": 2,
+      "skipped_q": 2,
+      "available_q": 6,
+      "score_bar": 6,
+      "marks_left": 12,
+      "bar_left": 12
+    },
+    {
+      "area": "Geometry",
+      "type": "All",
+      "available": 12,
+      "net_score": 0,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 4,
+      "available_q": 4,
+      "score_bar": 0,
+      "marks_left": 12,
+      "bar_left": 12
+    },
+    {
+      "area": "Modern Math",
+      "type": "All",
+      "available": 15,
+      "net_score": 0,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 5,
+      "available_q": 5,
+      "score_bar": 0,
+      "marks_left": 15,
+      "bar_left": 15
+    },
+    {
+      "area": "Numbers",
+      "type": "All",
+      "available": 12,
+      "net_score": 0,
+      "correct_q": 0,
+      "incorrect_q": 2,
+      "skipped_q": 2,
+      "available_q": 4,
+      "score_bar": 0,
+      "marks_left": 12,
+      "bar_left": 12
+    },
+    {
+      "area": "Algebra",
+      "type": "All",
+      "available": 9,
+      "net_score": 3,
+      "correct_q": 1,
+      "incorrect_q": 0,
+      "skipped_q": 2,
+      "available_q": 3,
+      "score_bar": 3,
+      "marks_left": 6,
+      "bar_left": 6
+    }
+  ],
+  "A": [
+    {
+      "area": "Verbal Ability",
+      "type": "A",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 0,
+      "available_q": 1
+    },
+    {
+      "area": "Reading Comprehension",
+      "type": "A",
+      "available": 27,
+      "net_score": 14,
+      "score_bar": 14,
+      "marks_left": 13,
+      "bar_left": 13,
+      "correct_q": 5,
+      "incorrect_q": 1,
+      "skipped_q": 3,
+      "available_q": 9
+    },
+    {
+      "area": "Logical Reasoning",
+      "type": "A",
+      "available": 27,
+      "net_score": 27,
+      "score_bar": 27,
+      "marks_left": 0,
+      "bar_left": 0,
+      "correct_q": 9,
+      "incorrect_q": 0,
+      "skipped_q": 0,
+      "available_q": 9
+    },
+    {
+      "area": "Arithmetic",
+      "type": "A",
+      "available": 12,
+      "net_score": 6,
+      "score_bar": 6,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 2,
+      "incorrect_q": 1,
+      "skipped_q": 1,
+      "available_q": 4
+    },
+    {
+      "area": "Geometry",
+      "type": "A",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 1
+    },
+    {
+      "area": "Modern Math",
+      "type": "A",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 1
+    }
+  ],
+  "B": [
+    {
+      "area": "Verbal Ability",
+      "type": "B",
+      "available": 15,
+      "net_score": 3,
+      "score_bar": 3,
+      "marks_left": 12,
+      "bar_left": 12,
+      "correct_q": 1,
+      "incorrect_q": 1,
+      "skipped_q": 3,
+      "available_q": 5
+    },
+    {
+      "area": "Reading Comprehension",
+      "type": "B",
+      "available": 18,
+      "net_score": -2,
+      "score_bar": 0,
+      "marks_left": 20,
+      "bar_left": 18,
+      "correct_q": 0,
+      "incorrect_q": 2,
+      "skipped_q": 4,
+      "available_q": 6
+    },
+    {
+      "area": "Data Interpretation",
+      "type": "B",
+      "available": 12,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 12,
+      "bar_left": 12,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 3,
+      "available_q": 4
+    },
+    {
+      "area": "Arithmetic",
+      "type": "B",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 1,
+      "available_q": 2
+    },
+    {
+      "area": "Numbers",
+      "type": "B",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 1,
+      "available_q": 2
+    },
+    {
+      "area": "Algebra",
+      "type": "B",
+      "available": 6,
+      "net_score": 3,
+      "score_bar": 3,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 1,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 2
+    },
+    {
+      "area": "Geometry",
+      "type": "B",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 1
+    },
+    {
+      "area": "Modern Math",
+      "type": "B",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 2,
+      "available_q": 2
+    }
+  ],
+  "C": [
+    {
+      "area": "Verbal Ability",
+      "type": "C",
+      "available": 6,
+      "net_score": 3,
+      "score_bar": 3,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 1,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 2
+    },
+    {
+      "area": "Reading Comprehension",
+      "type": "C",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 1
+    },
+    {
+      "area": "Logical Reasoning",
+      "type": "C",
+      "available": 12,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 12,
+      "bar_left": 12,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 3,
+      "available_q": 4
+    },
+    {
+      "area": "Data Interpretation",
+      "type": "C",
+      "available": 15,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 15,
+      "bar_left": 15,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 4,
+      "available_q": 5
+    },
+    {
+      "area": "Numbers",
+      "type": "C",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 1,
+      "skipped_q": 1,
+      "available_q": 2
+    },
+    {
+      "area": "Algebra",
+      "type": "C",
+      "available": 3,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 3,
+      "bar_left": 3,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 1,
+      "available_q": 1
+    },
+    {
+      "area": "Geometry",
+      "type": "C",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 2,
+      "available_q": 2
+    },
+    {
+      "area": "Modern Math",
+      "type": "C",
+      "available": 6,
+      "net_score": 0,
+      "score_bar": 0,
+      "marks_left": 6,
+      "bar_left": 6,
+      "correct_q": 0,
+      "incorrect_q": 0,
+      "skipped_q": 2,
+      "available_q": 2
+    }
+  ]
+};
+const maxAvailableByView = {
+  "All": 48,
+  "A": 27,
+  "B": 18,
+  "C": 15
+};
+let currentView = "All";
+const hoverTip = document.getElementById("hoverTip");
+
+function pct(value, base) {
+  return base ? Math.max(0, value / base * 100) : 0;
+}
+
+function labelForView(view) {
+  if (view === "All") return "Area";
+  return "Type " + view;
+}
+
+function sortRows(rows) {
+  return [...rows].sort((a,b) => (b.marks_left - a.marks_left) || (b.available - a.available));
+}
+
+function renderSummary(rows) {
+  const totalAvailable = rows.reduce((s,r) => s + r.available, 0);
+  const totalScore = rows.reduce((s,r) => s + r.net_score, 0);
+  const totalLeft = totalAvailable - totalScore;
+  document.getElementById("summary").innerHTML = `
+    <div><strong>${labelForView(currentView)}</strong></div>
+    <div><strong>${totalScore}/${totalAvailable}</strong> · ${totalLeft} marks left</div>
+  `;
+}
+
+function showTip(text, event) {
+  hoverTip.textContent = text;
+  hoverTip.style.display = "block";
+  positionTip(event);
+}
+
+function positionTip(event) {
+  const margin = 12;
+  const rect = hoverTip.getBoundingClientRect();
+
+  let clientX = event.clientX;
+  let clientY = event.clientY;
+
+  if ((clientX === 0 && clientY === 0) || clientX === undefined || clientY === undefined) {
+    const targetRect = event.target.getBoundingClientRect();
+    clientX = targetRect.left + targetRect.width / 2;
+    clientY = targetRect.top + targetRect.height / 2;
+  }
+
+  let x = clientX + 12;
+  let y = clientY + 12;
+
+  if (x + rect.width > window.innerWidth - margin) x = clientX - rect.width - 12;
+  if (y + rect.height > window.innerHeight - margin) y = clientY - rect.height - 12;
+  if (x < margin) x = margin;
+  if (y < margin) y = margin;
+
+  hoverTip.style.left = x + "px";
+  hoverTip.style.top = y + "px";
+}
+
+function hideTip() {
+  hoverTip.style.display = "none";
+}
+
+function segment(text, cls, widthPct, labelHtml) {
+  if (widthPct <= 0) return "";
+  const safe = text.replace(/`/g, "\\`");
+  return `<div class="segment ${cls}" style="width:${widthPct}%" onmouseenter="showTip(\`${safe}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${safe}\`, event)">${labelHtml || ""}</div>`;
+}
+
+function render() {
+  const rows = sortRows(dataByView[currentView]);
+  const maxAvailable = maxAvailableByView[currentView];
+  renderSummary(rows);
+
+  const chart = document.getElementById("chart");
+
+  const rowHtml = rows.map(r => {
+    const scorePct = pct(r.score_bar, r.available);
+    const leftPct = pct(r.bar_left, r.available);
+    const widthPct = pct(r.available, maxAvailable);
+
+    const tip =
+      `${r.net_score} scored, ${r.marks_left} marks left\n` +
+      `${r.correct_q} correct, ${r.incorrect_q} incorrect\n` +
+      `Note: not all incorrect attempts necessarily have penalty.`;
+
+    const scoreLabel = r.score_bar > 0
+      ? `<span class="seg-label score-label">${r.net_score}</span>`
+      : `<span class="score-badge">${r.net_score}</span>`;
+
+    const leftLabel = r.bar_left > 0
+      ? `<span class="seg-label left-label">${r.marks_left}</span>`
+      : "";
+
+    return `
+      <div class="area-row">
+        <div class="area-name">${r.area}</div>
+        <div class="bar-area">
+          <div class="bar-shell" style="width:${widthPct}%">
+            ${segment(tip, "seg-score", scorePct, scoreLabel)}
+            ${scorePct === 0 ? scoreLabel : ""}
+            ${segment(tip, "seg-left", leftPct, leftLabel)}
+            <span class="bar-value">${r.available}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const tickMax = maxAvailable <= 15 ? 15 : maxAvailable <= 30 ? 30 : 50;
+  const tickStep = tickMax <= 15 ? 3 : 10;
+  const ticks = [];
+
+  for (let t=0; t<=tickMax; t+=tickStep) {
+    ticks.push(`
+      <div class="tick" style="left:${pct(t, maxAvailable)}%"><span>${t}</span></div>
+    `);
+  }
+
+  chart.innerHTML = rowHtml + `
+    <div class="axis">
+      <div></div>
+      <div class="ticks">${ticks.join("")}</div>
+    </div>
+  `;
+}
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+  document.getElementById("btn-" + view).classList.add("active");
+  hideTip();
+  render();
+}
+
+document.addEventListener("click", function(e) {
+  if (!e.target.closest(".segment")) hideTip();
+});
+
+render();
+</script>
+</body>
+</html>

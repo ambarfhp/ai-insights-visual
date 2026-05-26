@@ -1,0 +1,2845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Topic Recurrence — Cumulative v5</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink:#111827;
+    --muted:#687385;
+    --bg:#f7f9fc;
+    --card:#ffffff;
+    --border:#e3e8ef;
+    --green:#1f9d55;
+    --red:#e5484d;
+    --skip:#edf2f7;
+    --skip-line:#cbd5e1;
+  }
+
+  * { box-sizing:border-box; }
+
+  body {
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .page {
+    max-width:1080px;
+    margin:24px auto;
+    padding:0 16px;
+  }
+
+  .card {
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    box-shadow:0 8px 24px rgba(15,23,42,.07);
+    padding:24px;
+  }
+
+  .header {
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+    margin-bottom:16px;
+  }
+
+  h1 {
+    margin:0;
+    font-size:28px;
+    line-height:1.15;
+    letter-spacing:-0.02em;
+  }
+
+  .subtitle {
+    margin-top:6px;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  .legend {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:10px 16px;
+    color:#374151;
+    font-size:12px;
+    max-width:430px;
+  }
+
+  .legend-item { display:flex; align-items:center; gap:6px; }
+
+  .swatch {
+    width:14px;
+    height:14px;
+    display:inline-block;
+    border-radius:4px;
+    border:1px solid rgba(0,0,0,.08);
+  }
+
+  .skip-swatch {
+    background:repeating-linear-gradient(135deg, var(--skip) 0 5px, var(--skip-line) 5px 7px, var(--skip) 7px 12px);
+  }
+
+  .controls-wrap { margin:12px 0 18px; }
+
+  .controls {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+  }
+
+  .filter-btn {
+    border:1px solid #d1d8e0;
+    background:#fff;
+    color:#374151;
+    border-radius:999px;
+    padding:9px 12px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+    text-align:center;
+  }
+
+  .filter-btn.active {
+    background:#111827;
+    color:#fff;
+    border-color:#111827;
+  }
+
+  .view-summary {
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    color:#374151;
+    font-size:13px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+  }
+
+  .view-summary strong { color:#111827; }
+
+  .chart-head {
+    display:grid;
+    grid-template-columns:250px 1fr 116px;
+    gap:12px;
+    align-items:center;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    border-bottom:1px solid #eef2f7;
+    padding-bottom:8px;
+    text-align:center;
+  }
+
+  .chart-head div:first-child { text-align:left; }
+
+  .row {
+    display:grid;
+    grid-template-columns:250px 1fr 116px;
+    gap:12px;
+    align-items:center;
+    padding:13px 0;
+    border-bottom:1px solid #f1f5f9;
+  }
+
+  .row:last-child { border-bottom:none; }
+
+  .name {
+    font-weight:700;
+    font-size:14px;
+    line-height:1.25;
+  }
+
+  .sub {
+    margin-top:3px;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:500;
+  }
+
+  .bar-area {
+    position:relative;
+    height:34px;
+  }
+
+  .bar-shell {
+    position:absolute;
+    left:0;
+    top:7px;
+    height:22px;
+    border-radius:9px;
+    overflow:hidden;
+    background:#f3f4f6;
+    border:1px solid #d1d5db;
+    display:flex;
+  }
+
+  .segment {
+    height:100%;
+    cursor:help;
+    position:relative;
+  }
+
+  .segment:hover { filter:brightness(.94); }
+
+  .seg-green { background:var(--green); }
+
+  .seg-red { background:var(--red); }
+
+  .seg-skip {
+    background:repeating-linear-gradient(135deg, var(--skip) 0 6px, var(--skip-line) 6px 8px, var(--skip) 8px 13px);
+  }
+
+  .seg-label {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+
+  .green-label,
+  .red-label {
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.20);
+  }
+
+  .skip-label { color:#334155; }
+
+  .bar-value {
+    position:absolute;
+    left:calc(100% + 7px);
+    top:2px;
+    font-weight:700;
+    font-size:12px;
+    color:#374151;
+    white-space:nowrap;
+  }
+
+  .opportunity {
+    text-align:center;
+    font-weight:700;
+    color:#111827;
+    font-size:13px;
+    line-height:1.25;
+  }
+
+  .opportunity span {
+    color:var(--muted);
+    font-weight:600;
+  }
+
+  .hover-tip {
+    position:fixed;
+    z-index:9999;
+    display:none;
+    max-width:330px;
+    white-space:pre-line;
+    background:#111827;
+    color:#fff;
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:12px;
+    line-height:1.45;
+    box-shadow:0 10px 24px rgba(15,23,42,.24);
+    pointer-events:none;
+  }
+
+  .footnote {
+    color:var(--muted);
+    font-size:12px;
+    margin-top:12px;
+    line-height:1.45;
+  }
+
+  @media (max-width:760px) {
+    .card { padding:18px; }
+
+    .header {
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .legend {
+      justify-content:flex-start;
+      max-width:none;
+    }
+
+    .controls {
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:8px;
+    }
+
+    #btn-All { grid-column:1 / -1; }
+
+    .filter-btn {
+      width:100%;
+      padding:9px 8px;
+      white-space:nowrap;
+    }
+
+    .view-summary {
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .chart-head { display:none; }
+
+    .row {
+      grid-template-columns:1fr;
+      gap:8px;
+      padding:14px 0 12px;
+    }
+
+    .opportunity {
+      text-align:left;
+      font-size:12px;
+    }
+
+    h1 { font-size:24px; }
+
+    .subtitle { font-size:13px; }
+
+    .hover-tip {
+      max-width:270px;
+      pointer-events:auto;
+    }
+  }
+
+  @media (max-width:360px) {
+    .controls { grid-template-columns:1fr; }
+    #btn-All { grid-column:auto; }
+    .seg-label { font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div>
+        <h1>Topic Recurrence</h1>
+        <div class="subtitle">Current-test problem topics, mapped across recent tests.</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--green)"></span> Correct</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--red)"></span> Incorrect</div>
+        <div class="legend-item"><span class="swatch skip-swatch"></span> Skipped</div>
+      </div>
+    </div>
+
+    <div class="controls-wrap">
+      <div class="controls">
+        <button class="filter-btn active" onclick="setView('All')" id="btn-All">Topic</button>
+        <button class="filter-btn" onclick="setView('A')" id="btn-A">Type A</button>
+        <button class="filter-btn" onclick="setView('B')" id="btn-B">Type B</button>
+        <button class="filter-btn" onclick="setView('C')" id="btn-C">Type C</button>
+      </div>
+    </div>
+
+    <div class="view-summary" id="summary"></div>
+
+    <div class="chart-head">
+      <div>Topic</div>
+      <div>Cumulative performance</div>
+      <div>Opportunity</div>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="footnote">Summary opportunity is the approximate sum of the top recurring rows currently shown. Opportunity/test = (incorrect + skipped) × 3 ÷ appeared tests. Treat it as a prioritization signal, not exact penalty-adjusted score loss.</div>
+  </div>
+</div>
+
+<div class="hover-tip" id="hoverTip"></div>
+
+<script>
+const dataByView = {
+  "All": [
+    {
+      "topic": "Sentence out of context",
+      "area": "Verbal Ability",
+      "type": "All",
+      "correct": 2,
+      "wrong": 6,
+      "skipped": 0,
+      "total": 8,
+      "missed": 6,
+      "appeared_tests": 5,
+      "types_seen": [
+        "A"
+      ],
+      "type_missed": {
+        "A": 6
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 2,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.6,
+      "cell_raw": [
+        "1W",
+        "1W",
+        "2W",
+        "1C\u00b71W",
+        "1C\u00b71W"
+      ]
+    },
+    {
+      "topic": "Paragraph Completion",
+      "area": "Verbal Ability",
+      "type": "All",
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 6,
+      "total": 7,
+      "missed": 7,
+      "appeared_tests": 4,
+      "types_seen": [
+        "B",
+        "C"
+      ],
+      "type_missed": {
+        "B": 5,
+        "C": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 5.2,
+      "cell_raw": [
+        "2S",
+        "1S",
+        "2S",
+        "1W\u00b71S",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Inference",
+      "area": "Reading Comprehension",
+      "type": "All",
+      "correct": 7,
+      "wrong": 5,
+      "skipped": 10,
+      "total": 22,
+      "missed": 15,
+      "appeared_tests": 5,
+      "types_seen": [
+        "A",
+        "B",
+        "C"
+      ],
+      "type_missed": {
+        "B": 6,
+        "A": 7,
+        "C": 2
+      },
+      "cells": [
+        {
+          "C": 2,
+          "W": 2,
+          "S": 4,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 3,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 3,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 9.0,
+      "cell_raw": [
+        "2C\u00b72W\u00b74S",
+        "3C\u00b72W\u00b71S",
+        "1C",
+        "1C\u00b71W\u00b72S",
+        "3S"
+      ]
+    },
+    {
+      "topic": "Specific Detail Question",
+      "area": "Reading Comprehension",
+      "type": "All",
+      "correct": 7,
+      "wrong": 3,
+      "skipped": 5,
+      "total": 15,
+      "missed": 8,
+      "appeared_tests": 5,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 8
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 2,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 3,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 4.8,
+      "cell_raw": [
+        "1S",
+        "2C\u00b71W",
+        "3C\u00b72S",
+        "1C\u00b72W\u00b71S",
+        "1C\u00b71S"
+      ]
+    },
+    {
+      "topic": "Summary",
+      "area": "Verbal Ability",
+      "type": "All",
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 5,
+      "total": 7,
+      "missed": 7,
+      "appeared_tests": 4,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 7
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 5.2,
+      "cell_raw": [
+        "2S",
+        "2S",
+        "1W\u00b71S",
+        "\u2014",
+        "1W"
+      ]
+    },
+    {
+      "topic": "Jumbled Paragraphs",
+      "area": "Verbal Ability",
+      "type": "All",
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 0,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1W",
+        "1W",
+        "\u2014",
+        "\u2014",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Style,Tone and Attitude",
+      "area": "Reading Comprehension",
+      "type": "All",
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1S",
+        "1S",
+        "\u2014",
+        "\u2014",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Application Question",
+      "area": "Reading Comprehension",
+      "type": "All",
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 1,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "A"
+      ],
+      "type_missed": {
+        "A": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1W",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Table",
+      "area": "Data Interpretation",
+      "type": "All",
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 4,
+      "total": 5,
+      "missed": 5,
+      "appeared_tests": 2,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 5
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 3,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 7.5,
+      "cell_raw": [
+        "1W\u00b73S",
+        "\u2014",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Puzzles",
+      "area": "Logical Reasoning",
+      "type": "All",
+      "correct": 1,
+      "wrong": 3,
+      "skipped": 4,
+      "total": 8,
+      "missed": 7,
+      "appeared_tests": 2,
+      "types_seen": [
+        "C"
+      ],
+      "type_missed": {
+        "C": 7
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 3,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 10.5,
+      "cell_raw": [
+        "1W\u00b73S",
+        "\u2014",
+        "\u2014",
+        "1C\u00b72W\u00b71S",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Time-Speed-Distance",
+      "area": "Arithmetic",
+      "type": "All",
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 1,
+      "total": 3,
+      "missed": 3,
+      "appeared_tests": 3,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 3
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1W",
+        "1W",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Time and Work",
+      "area": "Arithmetic",
+      "type": "All",
+      "correct": 1,
+      "wrong": 2,
+      "skipped": 0,
+      "total": 3,
+      "missed": 2,
+      "appeared_tests": 3,
+      "types_seen": [
+        "A"
+      ],
+      "type_missed": {
+        "A": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 2.0,
+      "cell_raw": [
+        "1W",
+        "1W",
+        "\u2014",
+        "1C",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Triangles",
+      "area": "Geometry",
+      "type": "All",
+      "correct": 1,
+      "wrong": 0,
+      "skipped": 3,
+      "total": 4,
+      "missed": 3,
+      "appeared_tests": 4,
+      "types_seen": [
+        "A"
+      ],
+      "type_missed": {
+        "A": 3
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 2.2,
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "1S",
+        "1C",
+        "1S"
+      ]
+    },
+    {
+      "topic": "Quadratic Equations",
+      "area": "Algebra",
+      "type": "All",
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Surds & Indices",
+      "area": "Numbers",
+      "type": "All",
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "B"
+      ],
+      "type_missed": {
+        "B": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "Base Systems",
+      "area": "Numbers",
+      "type": "All",
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 1,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "C"
+      ],
+      "type_missed": {
+        "C": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1W",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ]
+    },
+    {
+      "topic": "SICI",
+      "area": "Arithmetic",
+      "type": "All",
+      "correct": 2,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 4,
+      "missed": 2,
+      "appeared_tests": 4,
+      "types_seen": [
+        "A"
+      ],
+      "type_missed": {
+        "A": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 1.5,
+      "cell_raw": [
+        "1S",
+        "1C",
+        "\u2014",
+        "1C",
+        "1S"
+      ]
+    },
+    {
+      "topic": "Higher Order Polynomials",
+      "area": "Algebra",
+      "type": "All",
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "types_seen": [
+        "C"
+      ],
+      "type_missed": {
+        "C": 2
+      },
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "\u2014"
+        }
+      ],
+      "unconverted_marks_per_test": 3.0,
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "\u2014",
+        "\u2014",
+        "1S"
+      ]
+    }
+  ],
+  "A": [
+    {
+      "topic": "Sentence out of context",
+      "area": "Verbal Ability",
+      "type": "A",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 2,
+          "S": 0,
+          "appeared": true,
+          "raw": "2W"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C\u00b71W"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C\u00b71W"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "1W",
+        "2W",
+        "1C\u00b71W",
+        "1C\u00b71W"
+      ],
+      "correct": 2,
+      "wrong": 6,
+      "skipped": 0,
+      "total": 8,
+      "missed": 6,
+      "appeared_tests": 5,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.6
+    },
+    {
+      "topic": "Application Question",
+      "area": "Reading Comprehension",
+      "type": "A",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 1,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Inference",
+      "area": "Reading Comprehension",
+      "type": "A",
+      "cells": [
+        {
+          "C": 2,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "2C\u00b72S"
+        },
+        {
+          "C": 2,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "2C"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "1C\u00b71W\u00b71S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 3,
+          "appeared": true,
+          "raw": "3S"
+        }
+      ],
+      "cell_raw": [
+        "2C\u00b72S",
+        "2C",
+        "1C",
+        "1C\u00b71W\u00b71S",
+        "3S"
+      ],
+      "correct": 6,
+      "wrong": 1,
+      "skipped": 6,
+      "total": 13,
+      "missed": 7,
+      "appeared_tests": 5,
+      "current_missed": true,
+      "unconverted_marks_per_test": 4.2
+    },
+    {
+      "topic": "Time and Work",
+      "area": "Arithmetic",
+      "type": "A",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "1W",
+        "\u2014",
+        "1C",
+        "\u2014"
+      ],
+      "correct": 1,
+      "wrong": 2,
+      "skipped": 0,
+      "total": 3,
+      "missed": 2,
+      "appeared_tests": 3,
+      "current_missed": true,
+      "unconverted_marks_per_test": 2.0
+    },
+    {
+      "topic": "Triangles",
+      "area": "Geometry",
+      "type": "A",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "1S",
+        "1C",
+        "1S"
+      ],
+      "correct": 1,
+      "wrong": 0,
+      "skipped": 3,
+      "total": 4,
+      "missed": 3,
+      "appeared_tests": 4,
+      "current_missed": true,
+      "unconverted_marks_per_test": 2.2
+    },
+    {
+      "topic": "SICI",
+      "area": "Arithmetic",
+      "type": "A",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 0,
+          "appeared": true,
+          "raw": "1C"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "1C",
+        "\u2014",
+        "1C",
+        "1S"
+      ],
+      "correct": 2,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 4,
+      "missed": 2,
+      "appeared_tests": 4,
+      "current_missed": true,
+      "unconverted_marks_per_test": 1.5
+    }
+  ],
+  "B": [
+    {
+      "topic": "Paragraph Completion",
+      "area": "Verbal Ability",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "1W\u00b71S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "1S",
+        "1S",
+        "1W\u00b71S",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 4,
+      "total": 5,
+      "missed": 5,
+      "appeared_tests": 4,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.8
+    },
+    {
+      "topic": "Inference",
+      "area": "Reading Comprehension",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "2W\u00b71S"
+        },
+        {
+          "C": 1,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "1C\u00b71W\u00b71S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "2W\u00b71S",
+        "1C\u00b71W\u00b71S",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ],
+      "correct": 1,
+      "wrong": 3,
+      "skipped": 3,
+      "total": 7,
+      "missed": 6,
+      "appeared_tests": 3,
+      "current_missed": true,
+      "unconverted_marks_per_test": 6.0
+    },
+    {
+      "topic": "Specific Detail Question",
+      "area": "Reading Comprehension",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 2,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "2C\u00b71W"
+        },
+        {
+          "C": 3,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "3C\u00b72S"
+        },
+        {
+          "C": 1,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "1C\u00b72W\u00b71S"
+        },
+        {
+          "C": 1,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1C\u00b71S"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "2C\u00b71W",
+        "3C\u00b72S",
+        "1C\u00b72W\u00b71S",
+        "1C\u00b71S"
+      ],
+      "correct": 7,
+      "wrong": 3,
+      "skipped": 5,
+      "total": 15,
+      "missed": 8,
+      "appeared_tests": 5,
+      "current_missed": true,
+      "unconverted_marks_per_test": 4.8
+    },
+    {
+      "topic": "Summary",
+      "area": "Verbal Ability",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "2S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 2,
+          "appeared": true,
+          "raw": "2S"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 1,
+          "appeared": true,
+          "raw": "1W\u00b71S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        }
+      ],
+      "cell_raw": [
+        "2S",
+        "2S",
+        "1W\u00b71S",
+        "\u2014",
+        "1W"
+      ],
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 5,
+      "total": 7,
+      "missed": 7,
+      "appeared_tests": 4,
+      "current_missed": true,
+      "unconverted_marks_per_test": 5.2
+    },
+    {
+      "topic": "Jumbled Paragraphs",
+      "area": "Verbal Ability",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "1W",
+        "\u2014",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 0,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Style,Tone and Attitude",
+      "area": "Reading Comprehension",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "1S",
+        "\u2014",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Table",
+      "area": "Data Interpretation",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 3,
+          "appeared": true,
+          "raw": "1W\u00b73S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W\u00b73S",
+        "\u2014",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 4,
+      "total": 5,
+      "missed": 5,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 7.5
+    },
+    {
+      "topic": "Time-Speed-Distance",
+      "area": "Arithmetic",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "1W",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 2,
+      "skipped": 1,
+      "total": 3,
+      "missed": 3,
+      "appeared_tests": 3,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Quadratic Equations",
+      "area": "Algebra",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Surds & Indices",
+      "area": "Numbers",
+      "type": "B",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    }
+  ],
+  "C": [
+    {
+      "topic": "Inference",
+      "area": "Reading Comprehension",
+      "type": "C",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "1W",
+        "\u2014",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 1,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Paragraph Completion",
+      "area": "Verbal Ability",
+      "type": "C",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "1S",
+        "\u2014",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Puzzles",
+      "area": "Logical Reasoning",
+      "type": "C",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 3,
+          "appeared": true,
+          "raw": "1W\u00b73S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 1,
+          "W": 2,
+          "S": 1,
+          "appeared": true,
+          "raw": "1C\u00b72W\u00b71S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W\u00b73S",
+        "\u2014",
+        "\u2014",
+        "1C\u00b72W\u00b71S",
+        "\u2014"
+      ],
+      "correct": 1,
+      "wrong": 3,
+      "skipped": 4,
+      "total": 8,
+      "missed": 7,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 10.5
+    },
+    {
+      "topic": "Base Systems",
+      "area": "Numbers",
+      "type": "C",
+      "cells": [
+        {
+          "C": 0,
+          "W": 1,
+          "S": 0,
+          "appeared": true,
+          "raw": "1W"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        }
+      ],
+      "cell_raw": [
+        "1W",
+        "\u2014",
+        "\u2014",
+        "1S",
+        "\u2014"
+      ],
+      "correct": 0,
+      "wrong": 1,
+      "skipped": 1,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    },
+    {
+      "topic": "Higher Order Polynomials",
+      "area": "Algebra",
+      "type": "C",
+      "cells": [
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 0,
+          "appeared": false,
+          "raw": "\u2014"
+        },
+        {
+          "C": 0,
+          "W": 0,
+          "S": 1,
+          "appeared": true,
+          "raw": "1S"
+        }
+      ],
+      "cell_raw": [
+        "1S",
+        "\u2014",
+        "\u2014",
+        "\u2014",
+        "1S"
+      ],
+      "correct": 0,
+      "wrong": 0,
+      "skipped": 2,
+      "total": 2,
+      "missed": 2,
+      "appeared_tests": 2,
+      "current_missed": true,
+      "unconverted_marks_per_test": 3.0
+    }
+  ]
+};
+const maxTotalByView = {
+  "All": 22,
+  "A": 13,
+  "B": 15,
+  "C": 8
+};
+let currentView = "All";
+const hoverTip = document.getElementById("hoverTip");
+
+function pct(value, base) {
+  return base ? Math.max(0, value / base * 100) : 0;
+}
+
+function labelForView(view) {
+  if (view === "All") return "Topic";
+  return "Type " + view;
+}
+
+function sortRows(rows) {
+  return [...rows].sort((a,b) =>
+    // Primary: total not-converted occurrences across recent tests.
+    // This balances recurrence and leakage better than avg/test alone.
+    (b.missed - a.missed) ||
+    // Secondary: topic appeared in more tests.
+    (b.appeared_tests - a.appeared_tests) ||
+    // Tertiary: higher average opportunity per appeared test.
+    (b.unconverted_marks_per_test - a.unconverted_marks_per_test) ||
+    (b.total - a.total) ||
+    a.topic.localeCompare(b.topic)
+  );
+}
+
+function renderSummary(rows) {
+  const sorted = sortRows(rows);
+  const totalRows = rows.length;
+  const topRows = sorted.slice(0, Math.min(5, sorted.length));
+  const topOpportunity = topRows.reduce((s,r) => s + r.unconverted_marks_per_test, 0);
+  const topLabel = topRows.length === 1 ? "Top topic" : `Top ${topRows.length} topics`;
+
+  document.getElementById("summary").innerHTML = `
+    <div><strong>${labelForView(currentView)}</strong></div>
+    <div><strong>${totalRows}</strong> recurring topics · ${topLabel}: ~${topOpportunity.toFixed(1)} marks/test opportunity</div>
+  `;
+}
+
+function showTip(text, event) {
+  hoverTip.textContent = text;
+  hoverTip.style.display = "block";
+  positionTip(event);
+}
+
+function positionTip(event) {
+  const margin = 12;
+  const rect = hoverTip.getBoundingClientRect();
+
+  let clientX = event.clientX;
+  let clientY = event.clientY;
+
+  if ((clientX === 0 && clientY === 0) || clientX === undefined || clientY === undefined) {
+    const targetRect = event.target.getBoundingClientRect();
+    clientX = targetRect.left + targetRect.width / 2;
+    clientY = targetRect.top + targetRect.height / 2;
+  }
+
+  let x = clientX + 12;
+  let y = clientY + 12;
+
+  if (x + rect.width > window.innerWidth - margin) x = clientX - rect.width - 12;
+  if (y + rect.height > window.innerHeight - margin) y = clientY - rect.height - 12;
+  if (x < margin) x = margin;
+  if (y < margin) y = margin;
+
+  hoverTip.style.left = x + "px";
+  hoverTip.style.top = y + "px";
+}
+
+function hideTip() {
+  hoverTip.style.display = "none";
+}
+
+function segment(text, cls, widthPct, label) {
+  if (widthPct <= 0) return "";
+  const safe = text.replace(/`/g, "\\`");
+  const labelClass = cls === "seg-green" ? "green-label" : cls === "seg-red" ? "red-label" : "skip-label";
+  const labelHtml = label > 0 ? `<span class="seg-label ${labelClass}">${label}</span>` : "";
+  return `<div class="segment ${cls}" style="width:${widthPct}%" onmouseenter="showTip(\`${safe}\`, event)" onmousemove="positionTip(event)" onmouseleave="hideTip()" onclick="showTip(\`${safe}\`, event)">${labelHtml}</div>`;
+}
+
+function render() {
+  const rows = sortRows(dataByView[currentView]);
+  const maxTotal = maxTotalByView[currentView];
+  renderSummary(rows);
+
+  const chart = document.getElementById("chart");
+
+  const rowHtml = rows.map(r => {
+    const widthPct = pct(r.total, maxTotal);
+    const cPct = pct(r.correct, r.total);
+    const wPct = pct(r.wrong, r.total);
+    const sPct = pct(r.skipped, r.total);
+    const typeInfo = currentView === "All" ? `Types: ${r.types_seen.join(", ")}` : `Type ${r.type}`;
+
+    const commonTip =
+      `${r.topic}\n${r.area} · ${typeInfo}\n` +
+      `${r.total} appearances: ${r.correct} correct, ${r.wrong} incorrect, ${r.skipped} skipped\n` +
+      `${r.missed} not converted across ${r.appeared_tests} tests\n` +
+      `Approx. ${r.unconverted_marks_per_test} marks/test opportunity`;
+
+    return `
+      <div class="row">
+        <div class="name">${r.topic}<div class="sub">${r.area}</div></div>
+        <div class="bar-area">
+          <div class="bar-shell" style="width:${widthPct}%">
+            ${segment(commonTip, "seg-green", cPct, r.correct)}
+            ${segment(commonTip, "seg-red", wPct, r.wrong)}
+            ${segment(commonTip, "seg-skip", sPct, r.skipped)}
+            <span class="bar-value">${r.total}</span>
+          </div>
+        </div>
+        <div class="opportunity">~${r.unconverted_marks_per_test}/test<br><span>${r.appeared_tests} tests</span></div>
+      </div>
+    `;
+  }).join("");
+
+  chart.innerHTML = rowHtml;
+}
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+  document.getElementById("btn-" + view).classList.add("active");
+  hideTip();
+  render();
+}
+
+document.addEventListener("click", function(e) {
+  if (!e.target.closest(".segment")) hideTip();
+});
+
+render();
+</script>
+</body>
+</html>

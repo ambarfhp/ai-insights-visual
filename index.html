@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Insights Evidence Visuals</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --ink:#111827;
+      --muted:#687385;
+      --bg:#f7f9fc;
+      --card:#ffffff;
+      --border:#e3e8ef;
+      --primary:#2563eb;
+    }
+
+    * { box-sizing:border-box; }
+
+    body {
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:'IBM Plex Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .page {
+      max-width:980px;
+      margin:36px auto;
+      padding:0 18px;
+    }
+
+    .hero {
+      margin-bottom:24px;
+    }
+
+    h1 {
+      margin:0;
+      font-size:34px;
+      line-height:1.1;
+      letter-spacing:-0.03em;
+    }
+
+    .subtitle {
+      margin-top:10px;
+      color:var(--muted);
+      font-size:16px;
+      line-height:1.5;
+      max-width:720px;
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:16px;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:22px;
+      box-shadow:0 8px 24px rgba(15,23,42,.07);
+      text-decoration:none;
+      color:inherit;
+      display:flex;
+      flex-direction:column;
+      min-height:210px;
+      transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+    .card:hover {
+      transform:translateY(-2px);
+      box-shadow:0 12px 28px rgba(15,23,42,.10);
+      border-color:#c9d4e5;
+    }
+
+    .label {
+      color:var(--primary);
+      font-weight:700;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:10px;
+    }
+
+    h2 {
+      margin:0;
+      font-size:22px;
+      line-height:1.2;
+      letter-spacing:-0.02em;
+    }
+
+    .desc {
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+      margin:10px 0 0;
+      flex:1;
+    }
+
+    .open {
+      margin-top:18px;
+      font-weight:700;
+      color:var(--primary);
+      font-size:14px;
+    }
+
+    .note {
+      margin-top:22px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    @media (max-width:760px) {
+      .grid {
+        grid-template-columns:1fr;
+      }
+
+      h1 {
+        font-size:28px;
+      }
+
+      .subtitle {
+        font-size:15px;
+      }
+
+      .card {
+        min-height:auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>AI Insights Evidence Visuals</h1>
+      <div class="subtitle">
+        Interactive prototypes for showing student-facing evidence: area opportunity,
+        time return, and topic recurrence.
+      </div>
+    </section>
+
+    <section class="grid">
+      <a class="card" href="area-opportunity.html">
+        <div class="label">Chart 1</div>
+        <h2>Area Opportunity</h2>
+        <p class="desc">
+          Shows available marks, current score, and marks left by area, with Type A/B/C filters.
+        </p>
+        <div class="open">Open chart →</div>
+      </a>
+
+      <a class="card" href="time-return.html">
+        <div class="label">Chart 2</div>
+        <h2>Time Return</h2>
+        <p class="desc">
+          Shows where time was invested and what marks came back, using MPM as the return signal.
+        </p>
+        <div class="open">Open chart →</div>
+      </a>
+
+      <a class="card" href="topic-recurrence.html">
+        <div class="label">Chart 3</div>
+        <h2>Topic Recurrence</h2>
+        <p class="desc">
+          Shows recurring topic-level issues using cumulative correct, incorrect, and skipped outcomes.
+        </p>
+        <div class="open">Open chart →</div>
+      </a>
+    </section>
+
+    <div class="note">
+      Tip: keep all files in the same repository folder. GitHub Pages will open this landing page first.
+    </div>
+  </main>
+</body>
+</html>
