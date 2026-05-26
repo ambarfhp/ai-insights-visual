@@ -26,7 +26,7 @@
     }
 
     .page {
-      max-width:980px;
+      max-width:1080px;
       margin:36px auto;
       padding:0 18px;
     }
@@ -47,12 +47,12 @@
       color:var(--muted);
       font-size:16px;
       line-height:1.5;
-      max-width:720px;
+      max-width:760px;
     }
 
     .grid {
       display:grid;
-      grid-template-columns:repeat(3, minmax(0, 1fr));
+      grid-template-columns:repeat(2, minmax(0, 1fr));
       gap:16px;
     }
 
@@ -138,12 +138,20 @@
     <section class="hero">
       <h1>AI Insights Evidence Visuals</h1>
       <div class="subtitle">
-        Interactive prototypes for showing student-facing evidence: area opportunity,
-        time return, and topic recurrence.
+        Interactive prototypes for student-facing AI Insights evidence.
       </div>
     </section>
 
     <section class="grid">
+      <a class="card" href="integrated-drilldown.html">
+        <div class="label">Recommended</div>
+        <h2>Integrated Drilldown</h2>
+        <p class="desc">
+          Section → Area → Topic drilldown combining area opportunity, time return, and recurrence signals.
+        </p>
+        <div class="open">Open chart →</div>
+      </a>
+
       <a class="card" href="area-opportunity.html">
         <div class="label">Chart 1</div>
         <h2>Area Opportunity</h2>
@@ -173,7 +181,7 @@
     </section>
 
     <div class="note">
-      Tip: keep all files in the same repository folder. GitHub Pages will open this landing page first.
+      Keep all HTML files in the same repository root. GitHub Pages will open this landing page first.
     </div>
   </main>
 </body>
